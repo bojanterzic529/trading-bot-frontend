@@ -1,0 +1,11 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+.theme-border {
+  @apply border border-white/10;
+}
+
+.MuiChip-root path {
+  fill: rgb(255 252 252 / 26%)
+}
