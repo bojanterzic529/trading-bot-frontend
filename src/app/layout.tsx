@@ -6,8 +6,8 @@ import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
 export const metadata: Metadata = {
-  title: "solana-bot",
-  description: "solana-bot",
+  title: "trading-bot",
+  description: "trading-bot",
 };
 
 export default function RootLayout({

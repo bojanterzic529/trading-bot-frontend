@@ -4442,9 +4442,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"solana-bot@workspace:.":
+"trading-bot@workspace:.":
   version: 0.0.0-use.local
-  resolution: "solana-bot@workspace:."
+  resolution: "trading-bot@workspace:."
   dependencies:
     "@solana/spl-token": "npm:^0.4.9"
     "@solana/web3.js": "npm:^1.95.4"

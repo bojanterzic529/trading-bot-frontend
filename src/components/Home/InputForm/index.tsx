@@ -1,7 +1,7 @@
 import { useWalletContext } from "../../../contexts/WalletContext";
 import { SiSolana } from "react-icons/si";
 import { FaDatabase } from "react-icons/fa";
-import { IoIosDownload } from "react-icons/io";
+import { IoIosDownload, IoMdRefresh } from "react-icons/io";
 import { AiFillPlusCircle, AiFillMinusCircle, AiOutlinePlayCircle, AiOutlineStop } from "react-icons/ai";
 import validator from "@/lib/validator";
 import { useEffect, useState } from "react";
@@ -41,7 +41,7 @@ export default function InputForm({ }: any) {
   const [maxLoss, setMaxLoss] = useState('1000');
   const [timeFrame, setTimeFrame] = useState('1');
 
-  const { status, symbols, balances, history, startBot, stopBot, restartBot, loading } = useBotContext();
+  const { status, symbols, balances, history, startBot, stopBot, restartBot, loading, fetchHistory, fetchBalances, fetchStatus } = useBotContext();
   useEffect(() => {
     const data = status.storageData;
     if (!data) return;
@@ -52,7 +52,8 @@ export default function InputForm({ }: any) {
     setPositionSize(data.amount);
     setTimeFrame(data.timeFrame);
     setTimeLimit(data.timeLimit ? (data.timeLimit / (3600 * 1000)).toString() : '')
-    setPairs(data.pairs)
+    setPairs(data.pairs);
+    setExchange(data.exchange)
   }, [status?.storageData?.fastLength, status?.storageData?.slowLength, status?.storageData?.amount, status?.storageData?.timeFrame, status?.storageData?.pairs?.length])
 
   useEffect(() => {
@@ -64,6 +65,7 @@ export default function InputForm({ }: any) {
     const params: Record<string, any> = {
       apiKey: apikey,
       apiSecret: apiSecretkey,
+      exchange,
       authkey,
       pair,
       pairs,
@@ -99,7 +101,7 @@ export default function InputForm({ }: any) {
     })
   }
 
-  console.log('debug history', history)
+  // console.log('debug history', history)
   return (
     <>
       <div className="mb-6 mt-4">
@@ -112,14 +114,14 @@ export default function InputForm({ }: any) {
               className="w-full p-2 mt-1 bg-background text-sm theme-border rounded-md outline-none"
             >
               <option value="mexc">MEXC</option>
-              {/* <option value="bybit">Bybit</option> */}
+              <option value="bybit">Bybit</option>
             </select>
           </div>
           <div className="flex flex-col justify-between">
             <label></label>
             <button
               className="bg-background-light  text-white px-4 py-2 text-sm rounded-md font-semibold flex gap-1 items-center uppercase"
-              onClick={() => { setShowModal(true) }}>
+              onClick={() => { fetchBalances(); setShowModal(true); }}>
               Balance
             </button>
           </div>
@@ -185,7 +187,7 @@ export default function InputForm({ }: any) {
             >
               <option value={'SELECT PAIR'}>--SELECT PAIR--</option>
               {
-                (symbols?.data ?? INIT_PAIRS).map((p: string) => {
+                (symbols ?? INIT_PAIRS).sort().map((p: string) => {
                   return (<option key={p} value={p}>{p}</option>)
                 })
               }
@@ -386,6 +388,14 @@ export default function InputForm({ }: any) {
             {loading ? 'Generating...' : 'Generate Wallet'}
           </button> */}
             <button
+              onClick={() => {fetchHistory(); fetchStatus();}}
+              className="bg-background-light text-white px-4 py-2 text-sm rounded-md font-semibold flex gap-1 items-center uppercase"
+              disabled={loading || !status.storageData?.isRunning}
+            >
+              <IoMdRefresh className="text-foreground text-lg" />
+              Refresh
+            </button>
+            <button
               onClick={() => handleStart()}
               className="bg-background-light text-white px-4 py-2 text-sm rounded-md font-semibold flex gap-1 items-center uppercase"
               disabled={loading || status.storageData?.isRunning}
@@ -427,17 +437,17 @@ export default function InputForm({ }: any) {
                   </tr>
                 </thead>
                 <tbody>
-                  {balances.map((trade: any, index: string) => (
+                  {balances.map((balance: any, index: string) => (
                     <tr
                       key={"history-" + index}
                       className={cn(
                         "bg-background overflow-y-auto grid grid-cols-[200px_312px] items-center transition-all overflow-visible",
                       )}>
                       <td className="py-2 px-4 text-center">
-                        {trade.asset}
+                        {balance.asset}
                       </td>
                       <td className="py-2 px-4 text-center">
-                        {trade.free}
+                        {balance.free}
                       </td>
                     </tr>
                   ))}
@@ -488,10 +498,10 @@ export default function InputForm({ }: any) {
                   {trade.symbol}
                 </td>
                 <td className="py-2 px-4 text-center">
-                  {new Date(trade.time + new Date().getTimezoneOffset()).toString()}
+                  {new Date(1 * trade.time + new Date().getTimezoneOffset()).toString()}
                 </td>
-                <td className={`py-2 px-4 text-green text-center ${trade.isBuyer ? "text-foreground" : "text-red-500"}`} >
-                  {trade.isBuyer ? "Buy" : "Sell"}
+                <td className={`py-2 px-4 text-green text-center ${trade.isBuyer || trade.side == "Buy" ? "text-foreground" : "text-red-500"}`} >
+                  {trade.side ?? (trade.isBuyer ? "Buy" : "Sell")}
                 </td>
                 <td className="py-2 px-4 text-center">
                   {trade.price}

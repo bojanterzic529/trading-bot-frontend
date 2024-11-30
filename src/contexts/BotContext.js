@@ -116,7 +116,7 @@ export const BotProvider = ({ children }) => {
     setInterval(() => {
       fetchStatus();
       fetchBalances();
-    }, 5000);
+    }, 60000);
     fetchSymbols();
     fetchStatus();
     fetchBalances();
@@ -125,7 +125,7 @@ export const BotProvider = ({ children }) => {
 
   return (
     <BotContext.Provider
-      value={{ status, loading, symbols, balances, history, startBot, stopBot, restartBot, fetchHistory }}
+      value={{ status, loading, symbols, balances, history, startBot, stopBot, restartBot, fetchHistory, fetchBalances, fetchStatus }}
     >
       {children}
     </BotContext.Provider>
