@@ -11,6 +11,12 @@ export const AuthProvider = ({ children }) => {
   const [userData, setUserData] = useState(null);
   const [loading, setLoading] = useState(true);
 
+  const setHeader = () => {
+    const token = localStorage.getItem("token");
+    if (token) {
+      axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+    }
+  }
   useEffect(() => {
     const token = localStorage.getItem("token");
     if (token) {
@@ -20,12 +26,15 @@ export const AuthProvider = ({ children }) => {
         })
         .then(res => {
           setUserData(res.data);
+          setHeader();
+          setLoading(false);
         })
         .catch(() => {
           localStorage.removeItem("token");
         })
+    } else {
+      setLoading(false);
     }
-    setLoading(false);
   }, []);
 
   const login = async (email, password) => {
@@ -40,6 +49,7 @@ export const AuthProvider = ({ children }) => {
 
       localStorage.setItem("token", data.token);
       setUserData(data.user);
+      setHeader();
       return data;
     } catch (error) {
       throw new Error(error.response.data.message);
@@ -58,6 +68,7 @@ export const AuthProvider = ({ children }) => {
       );
       localStorage.setItem("token", data.token);
       setUserData(data.user);
+      setHeader();
       return data;
     } catch (error) {
       throw new Error(error.response.data.message);
@@ -67,6 +78,7 @@ export const AuthProvider = ({ children }) => {
   const logout = () => {
     localStorage.removeItem("token");
     setUserData(null);
+    setHeader();
   };
 
   if (loading) return <LoadingScreen />

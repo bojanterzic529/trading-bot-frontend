@@ -16,6 +16,15 @@ const INIT_PAIRS = [
   'BTCUSDC', 'ETHUSDC', 'BNBUSDC', 'SOLUSDC', 'DOGEUSDC', 'PEPEUSDC'
 ]
 
+interface PAIR_INFO {
+  exchange: String;
+  timeFrame: String;
+  symbol: String;
+  strategy: String;
+  stopLoss: String;
+  takeProfit: String;
+}
+
 const backendURL = process.env.NEXT_PUBLIC_BACKEND_URL
 
 export default function InputForm({ }: any) {
@@ -27,7 +36,7 @@ export default function InputForm({ }: any) {
   const [apiSecretkey, setApiSecretkey] = useState('');
   const [authkey, setAuthkey] = useState('');
   const [pair, setPair] = useState('');
-  const [pairs, setPairs] = useState<string[]>([]);
+  const [pairs, setPairs] = useState<PAIR_INFO[]>([]);
   const [strategy, setStrategy] = useState('ema');
   const [fastLength, setFastLength] = useState('9')
   const [slowLength, setSlowLength] = useState('20');
@@ -41,7 +50,21 @@ export default function InputForm({ }: any) {
   const [maxLoss, setMaxLoss] = useState('1000');
   const [timeFrame, setTimeFrame] = useState('1');
 
-  const { status, symbols, balances, history, startBot, stopBot, restartBot, loading, fetchHistory, fetchBalances, fetchStatus } = useBotContext();
+  const {
+    status,
+    symbols,
+    balances,
+    trades,
+    prices,
+    startBot,
+    stopBot,
+    restartBot,
+    loading,
+    fetchTrades,
+    fetchBalances,
+    fetchStatus,
+    fetchPrices
+  } = useBotContext();
   useEffect(() => {
     const data = status.storageData;
     if (!data) return;
@@ -113,8 +136,9 @@ export default function InputForm({ }: any) {
               onChange={(e) => setExchange(e.target.value)}
               className="w-full p-2 mt-1 bg-background text-sm theme-border rounded-md outline-none"
             >
-              <option value="mexc">MEXC</option>
+              <option value="binance">Binance</option>
               <option value="bybit">Bybit</option>
+              <option value="mexc">MEXC</option>
             </select>
           </div>
           <div className="flex flex-col justify-between">
@@ -182,7 +206,7 @@ export default function InputForm({ }: any) {
             <label className="text-sm font-semibold uppercase">Pair</label>
             <select
               value={"SELECT PAIR"}
-              onChange={(e) => { setPairs(pairs.includes(e.target.value) ? pairs : pairs.concat([e.target.value])) }}
+              onChange={(e) => { setPairs(pairs.filter(p => p.symbol == e.target.value).length > 0 ? pairs : pairs.concat({ symbol: e.target.value, exchange, timeFrame, strategy, stopLoss, takeProfit })) }}
               className="w-full p-2 mt-1 bg-background text-sm theme-border rounded-md outline-none"
             >
               <option value={'SELECT PAIR'}>--SELECT PAIR--</option>
@@ -196,13 +220,33 @@ export default function InputForm({ }: any) {
           <div key="pairs" className="flex mt-8">
             {
               pairs.map((e) => (
-                <Chip key={e} label={e} variant="outlined" style={{ color: "rgb(255 255 255 / 0.65)" }} onDelete={() => { setPairs(pairs.filter(p => p != e)) }}></Chip>
+                <Chip key={`${e.exchange}:${e.symbol}:${e.timeFrame}m`} label={`${e.exchange}:${e.symbol}:${e.timeFrame}m`} variant="outlined" style={{ color: "rgb(255 255 255 / 0.65)" }} onDelete={() => { setPairs(pairs.filter(p => p != e)) }}></Chip>
               ))
             }
           </div>
         </div>
 
         <div className="grid grid-rows-4 lg:grid-rows-1 lg:grid-cols-4 gap-4 mb-4">
+        <div>
+            <label className="text-sm font-semibold uppercase ml-2">
+              Time Frame
+            </label>
+            <select
+              value={timeFrame}
+              onChange={(e) => setTimeFrame(e.target.value)}
+              className="w-full p-2 mt-1 bg-background text-sm theme-border rounded-md outline-none"
+            >
+              <option value="1">1m</option>
+              <option value="2">2m</option>
+              <option value="3">3m</option>
+              <option value="5">5m</option>
+              <option value="10">10m</option>
+              <option value="15">15m</option>
+              <option value="30">30m</option>
+              <option value="45">45m</option>
+              <option value="60">60m</option>
+            </select>
+          </div>
           <div>
             <label className="text-sm font-semibold uppercase">Strategy</label>
             <select
@@ -214,11 +258,9 @@ export default function InputForm({ }: any) {
               <option value="bollinger">Bollinger Band</option>
             </select>
           </div>
-        </div>
-        {
-          strategy == "ema" && (
-            <>
-              <div className="grid grid-rows-4 lg:grid-rows-1 lg:grid-cols-4 gap-4 mb-4">
+          {
+            strategy == "ema" && (
+              <>
                 <div>
                   <label className="text-sm font-semibold uppercase">
                     Fast EMA Length <span className="text-foreground">*</span>
@@ -243,10 +285,66 @@ export default function InputForm({ }: any) {
                     className="w-full p-2 mt-1 bg-background text-sm theme-border rounded-md outline-none"
                   />
                 </div>
-              </div>
-            </>
-          )
-        }
+              </>
+            )
+          }
+        </div>
+        <div className="grid grid-rows-4 lg:grid-rows-1 lg:grid-cols-4 gap-4 mb-4">
+          <div>
+            <label className="text-sm font-semibold uppercase">Stop Loss</label>
+            <select
+              value={stopLoss}
+              onChange={(e) => setStopLoss(e.target.value)}
+              className="w-full p-2 mt-1 bg-background text-sm theme-border rounded-md outline-none"
+            >
+              <option value="no">No</option>
+              <option value="atr">ATR</option>
+              <option value="trailing">Trailing</option>
+              <option value="static">Static</option>
+            </select>
+          </div>
+          <div>
+            <label className="text-sm font-semibold uppercase ml-2">
+              Stop Loss Percent
+            </label>
+            <input
+              type="text"
+              value={slPercent}
+              onChange={(e) => setSlPercent(e.target.value)}
+              disabled={stopLoss != "static"}
+              placeholder="Enter Stop Loss Percent"
+              className="w-full p-2 mt-1 bg-background text-sm theme-border rounded-md outline-none"
+            />
+          </div>
+        </div>
+        <div className="grid grid-rows-4 lg:grid-rows-1 lg:grid-cols-4 gap-4 mb-4">
+          <div>
+            <label className="text-sm font-semibold uppercase">Take Profit</label>
+            <select
+              value={takeProfit}
+              onChange={(e) => setTakeProfit(e.target.value)}
+              className="w-full p-2 mt-1 bg-background text-sm theme-border rounded-md outline-none"
+            >
+              <option value="no">No</option>
+              <option value="atr">ATR</option>
+              <option value="trailing">Trailing</option>
+              <option value="static">Static</option>
+            </select>
+          </div>
+          <div>
+            <label className="text-sm font-semibold uppercase ml-2">
+              Take Profit Percent
+            </label>
+            <input
+              type="text"
+              value={tpPercent}
+              onChange={(e) => setTpPercent(e.target.value)}
+              disabled={takeProfit != "static"}
+              placeholder="Enter Take Profit Percent"
+              className="w-full p-2 mt-1 bg-background text-sm theme-border rounded-md outline-none"
+            />
+          </div>
+        </div>
         <div className="text-base font-semibold uppercase text-foreground">-------------------------------------   Trading Setting   -----------------------------------------</div>
         <div className="grid grid-rows-4 lg:grid-rows-1 lg:grid-cols-4 gap-4 mb-4">
           <div>
@@ -273,33 +371,6 @@ export default function InputForm({ }: any) {
               className="w-full p-2 mt-1 bg-background text-sm theme-border rounded-md outline-none"
             />
           </div>
-
-          <div>
-            <label className="text-sm font-semibold uppercase">Stop Loss</label>
-            <select
-              value={stopLoss}
-              onChange={(e) => setStopLoss(e.target.value)}
-              className="w-full p-2 mt-1 bg-background text-sm theme-border rounded-md outline-none"
-            >
-              <option value="no">No</option>
-              <option value="atr">ATR</option>
-              <option value="trailing">Trailing</option>
-              <option value="static">Static</option>
-            </select>
-          </div>
-          <div>
-            <label className="text-sm font-semibold uppercase">Take Profit</label>
-            <select
-              value={takeProfit}
-              onChange={(e) => setTakeProfit(e.target.value)}
-              className="w-full p-2 mt-1 bg-background text-sm theme-border rounded-md outline-none"
-            >
-              <option value="no">No</option>
-              <option value="atr">ATR</option>
-              <option value="trailing">Trailing</option>
-              <option value="static">Static</option>
-            </select>
-          </div>
         </div>
         <div className="grid grid-rows-4 lg:grid-rows-1 lg:grid-cols-4 gap-4 mb-4">
           <div>
@@ -318,52 +389,9 @@ export default function InputForm({ }: any) {
               className="w-full p-2 mt-1 bg-background text-sm theme-border rounded-md outline-none"
             />
           </div>
-          <div>
-            <label className="text-sm font-semibold uppercase ml-2">
-              Time Frame
-            </label>
-            <select
-              value={timeFrame}
-              onChange={(e) => setTimeFrame(e.target.value)}
-              className="w-full p-2 mt-1 bg-background text-sm theme-border rounded-md outline-none"
-            >
-              <option value="1">1m</option>
-              <option value="2">2m</option>
-              <option value="3">3m</option>
-              <option value="5">5m</option>
-              <option value="10">10m</option>
-              <option value="15">15m</option>
-              <option value="30">30m</option>
-              <option value="45">45m</option>
-              <option value="60">60m</option>
-            </select>
-          </div>
-          <div>
-            <label className="text-sm font-semibold uppercase ml-2">
-              Stop Loss Percent
-            </label>
-            <input
-              type="text"
-              value={slPercent}
-              onChange={(e) => setSlPercent(e.target.value)}
-              disabled={stopLoss != "static"}
-              placeholder="Enter Stop Loss Percent"
-              className="w-full p-2 mt-1 bg-background text-sm theme-border rounded-md outline-none"
-            />
-          </div>
-          <div>
-            <label className="text-sm font-semibold uppercase ml-2">
-              Take Profit Percent
-            </label>
-            <input
-              type="text"
-              value={tpPercent}
-              onChange={(e) => setTpPercent(e.target.value)}
-              disabled={takeProfit != "static"}
-              placeholder="Enter Take Profit Percent"
-              className="w-full p-2 mt-1 bg-background text-sm theme-border rounded-md outline-none"
-            />
-          </div>
+
+
+
         </div>
         <div className="flex flex-col md:flex-row justify-between md:items-center">
           <div className="flex gap-5 items-center p-2 rounded-md">
@@ -388,9 +416,9 @@ export default function InputForm({ }: any) {
             {loading ? 'Generating...' : 'Generate Wallet'}
           </button> */}
             <button
-              onClick={() => {fetchHistory(); fetchStatus();}}
+              onClick={() => { fetchTrades(); fetchStatus(); fetchPrices(); }}
               className="bg-background-light text-white px-4 py-2 text-sm rounded-md font-semibold flex gap-1 items-center uppercase"
-              disabled={loading || !status.storageData?.isRunning}
+              disabled={loading}
             >
               <IoMdRefresh className="text-foreground text-lg" />
               Refresh
@@ -468,49 +496,51 @@ export default function InputForm({ }: any) {
       <div className="overflow-y-auto max-h-[600px] rounded-md theme-border">
         <table className="w-full text-sm min-w-[960px]">
           <thead>
-            <tr className="bg-background-light text-left overflow-y-auto grid grid-cols-[75px_1.5fr_0.5fr_0.5fr_0.5fr_0.5fr] uppercase font-bold">
-              <th className="py-2 px-4 flex items-center">
-                Pair
-              </th>
+            <tr className="bg-background-light text-left overflow-y-auto grid grid-cols-[200px_0.5fr_0.5fr_0.5fr_0.5fr_0.5fr] uppercase font-bold">
               <th className="py-2 px-4 font-semibold text-center text-nowrap">
                 Date
               </th>
-              <th className="py-2 px-4 font-semibold text-center text-nowrap">Side</th>
-              <th className="py-2 px-4 font-semibold text-center text-nowrap">
-                Price
+              <th className="py-2 px-4 text-center">
+                Pair
               </th>
               <th className="py-2 px-4 font-semibold text-center text-nowrap">
-                Amount
+                AmountIn
               </th>
               <th className="py-2 px-4 font-semibold text-center text-nowrap">
-                Amount
+                AmountOut
+              </th>
+              <th className="py-2 px-4 font-semibold text-center text-nowrap">
+                Timespan
+              </th>
+              <th className="py-2 px-4 font-semibold text-center text-nowrap">
+                ROI
               </th>
             </tr>
           </thead>
           <tbody>
-            {history.flat().map((trade: any, index: string) => (
+            {trades.map((trade: any, index: string) => (
               <tr
                 key={"history-" + index}
                 className={cn(
-                  "bg-background overflow-y-auto grid grid-cols-[75px_1.5fr_0.5fr_0.5fr_0.5fr_0.5fr] items-center transition-all overflow-visible",
+                  "bg-background overflow-y-auto grid grid-cols-[200px_0.5fr_0.5fr_0.5fr_0.5fr_0.5fr] items-center transition-all overflow-visible",
                 )}>
+                <td className="py-2 px-4 text-center">
+                  {trade.date}
+                </td>
                 <td className="py-2 px-4 text-center">
                   {trade.symbol}
                 </td>
-                <td className="py-2 px-4 text-center">
-                  {new Date(1 * trade.time + new Date().getTimezoneOffset()).toString()}
-                </td>
-                <td className={`py-2 px-4 text-green text-center ${trade.isBuyer || trade.side == "Buy" ? "text-foreground" : "text-red-500"}`} >
-                  {trade.side ?? (trade.isBuyer ? "Buy" : "Sell")}
+                <td className={`py-2 px-4 text-green text-center `} >
+                  {trade.input}
                 </td>
                 <td className="py-2 px-4 text-center">
-                  {trade.price}
+                  {trade.output + trade.quoteQty * (prices.filter((p: any) => p.symbol == trade.symbol)[0]?.price ?? 1)}
                 </td>
                 <td className="py-2 px-4 text-center">
-                  {trade.qty} {trade.symbol.replaceAll(trade.commissionAsset, '')}
+                  {trade.timeSpan}m
                 </td>
                 <td className="py-2 px-4 text-center">
-                  {trade.quoteQty} {trade.commissionAsset}
+                  {((trade.output + trade.quoteQty * (prices.filter((p: any) => p.symbol == trade.symbol)[0]?.price ?? 1) - trade.input) / trade.input * 100).toFixed(2)} %
                 </td>
               </tr>
             ))}

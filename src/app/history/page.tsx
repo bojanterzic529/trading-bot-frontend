@@ -2,58 +2,50 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
-import ActionButtons from "@/components/Home/ActionButtons";
 import Header from "@/components/Home/Header";
-import InputForm from "@/components/Home/InputForm";
-import WalletTable from "@/components/Home/WalletTable";
 
 import { useAuth } from "@/contexts/AuthContext";
 import LoadingScreen from "@/components/LoadingScreen";
 import { useBotContext } from "@/contexts/BotContext";
+import { cn } from "@/lib/utils";
+import { IoMdRefresh } from "react-icons/io";
 
 
 export default function History() {
   const router = useRouter();
-  const { userData } = useAuth();
+  const { userData, loading: isLoading } = useAuth();
   useEffect(() => {
-    if (!userData) return router.push("/login");
-    setLoading(false);
-  }, [userData]);
-  const [isLoading, setLoading] = useState(false);
+    if (!userData && !isLoading) return router.push("/login");
+  }, [userData, isLoading]);
+  // const [isLoading, setLoading] = useState(false);
 
   const [exchange, setExchange] = useState('mexc');
-  const { loading, history } = useBotContext();
+  const {
+    status,
+    history,
+    loading,
+    fetchTrades,
+    fetchStatus,
+    fetchPrices
+  } = useBotContext();
 
   if (isLoading) return <LoadingScreen />;
   return (
     <div className="flex py-2 justify-center items-center min-h-screen bg-background-dark text-white/65">
       <div className="w-[98%] flex flex-col p-4 rounded-md bg-background theme-border">
         <Header />
-        <div className="grid grid-rows-4 lg:grid-rows-1 lg:grid-cols-4 gap-4 mb-4">
-          <div>
-            <label className="text-sm font-semibold uppercase">Exchange</label>
-            <select
-              value={exchange}
-              onChange={(e) => setExchange(e.target.value)}
-              className="w-full p-2 mt-1 bg-background text-sm theme-border rounded-md outline-none"
-            >
-              <option value="mexc">MEXC</option>
-              {/* <option value="bybit">Bybit</option> */}
-            </select>
-          </div>
-        </div>
         <div className="overflow-y-auto max-h-[600px] rounded-md theme-border">
           <table className="w-full text-sm min-w-[960px]">
             <thead>
               <tr className="bg-background-light text-left overflow-y-auto grid grid-cols-[75px_1.5fr_0.5fr_0.5fr_0.5fr_0.5fr] uppercase font-bold">
                 <th className="py-2 px-4 flex items-center">
-                  Pir
+                  Pair
                 </th>
                 <th className="py-2 px-4 font-semibold text-center text-nowrap">
                   Date
                 </th>
-                <th className="py-2 px-4 font-semibold text-nowrap">Side</th>
-                <th className="py-2 px-4 font-semibold text-nowrap">
+                <th className="py-2 px-4 font-semibold text-center text-nowrap">Side</th>
+                <th className="py-2 px-4 font-semibold text-center text-nowrap">
                   Price
                 </th>
                 <th className="py-2 px-4 font-semibold text-center text-nowrap">
@@ -65,7 +57,32 @@ export default function History() {
               </tr>
             </thead>
             <tbody>
-              
+              {history.flat().map((trade: any, index: string) => (
+                <tr
+                  key={"history-" + index}
+                  className={cn(
+                    "bg-background overflow-y-auto grid grid-cols-[75px_1.5fr_0.5fr_0.5fr_0.5fr_0.5fr] items-center transition-all overflow-visible",
+                  )}>
+                  <td className="py-2 px-4 text-center">
+                    {trade.symbol}
+                  </td>
+                  <td className="py-2 px-4 text-center">
+                    {new Date(1 * trade.time + new Date().getTimezoneOffset()).toString()}
+                  </td>
+                  <td className={`py-2 px-4 text-green text-center ${trade.isBuyer ? "text-foreground" : "text-red-500"}`} >
+                    {trade.isBuyer ? "Buy" : "Sell"}
+                  </td>
+                  <td className="py-2 px-4 text-center">
+                    {trade.price}
+                  </td>
+                  <td className="py-2 px-4 text-center">
+                    {trade.qty} {trade.symbol.replaceAll(trade.commissionAsset, '')}
+                  </td>
+                  <td className="py-2 px-4 text-center">
+                    {trade.quoteQty} {trade.commissionAsset}
+                  </td>
+                </tr>
+              ))}
             </tbody>
           </table>
         </div>
