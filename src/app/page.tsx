@@ -18,7 +18,7 @@ export default function Home() {
     if (!userData) return router.push("/login");
     setLoading(false);
   }, [userData]);
-  const [isLoading, setLoading] = useState(false);
+  const [isLoading, setLoading] = useState(true);
 
   if (isLoading) return <LoadingScreen />;
   return (

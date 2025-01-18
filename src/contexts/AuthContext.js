@@ -66,6 +66,22 @@ export const AuthProvider = ({ children }) => {
           confirmPassword,
         }
       );
+      return data;
+    } catch (error) {
+      throw new Error(error.response.data.message);
+    }
+  };
+
+  const resetPassword = async (email, password, confirmPassword) => {
+    try {
+      const { data } = await axios.post(
+        `${backendURL}/api/auth/reset`,
+        {
+          email,
+          password,
+          confirmPassword,
+        }
+      );
       localStorage.setItem("token", data.token);
       setUserData(data.user);
       setHeader();
@@ -83,7 +99,7 @@ export const AuthProvider = ({ children }) => {
 
   if (loading) return <LoadingScreen />
   return (
-    <AuthContext.Provider value={{ userData, login, signup, logout, loading }}>
+    <AuthContext.Provider value={{ userData, login, signup, resetPassword, logout, loading }}>
       {children}
     </AuthContext.Provider>
   );

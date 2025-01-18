@@ -3,12 +3,14 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import axios from 'axios';
 import dotenv from "dotenv"
+import { useAuth } from './AuthContext';
 dotenv.config()
 const backendURL = process.env.NEXT_PUBLIC_BACKEND_URL
 
 export const BotContext = createContext();
 
 export const BotProvider = ({ children }) => {
+  const { userData, loading: authLoading } = useAuth();
   const [symbols, setSymbols] = useState([]);
   const [status, setStatus] = useState({});
   const [balances, setbalances] = useState([]);
@@ -128,6 +130,18 @@ export const BotProvider = ({ children }) => {
     return res.data;
   }
 
+  const clearHistory = async () => {
+    const res = await axios.get(`${backendURL}/api/delete/history`);
+    fetchStatus();
+    return res.data;
+  }
+
+  const clearCache = async () => {
+    const res = await axios.get(`${backendURL}/api/delete/cache`);
+    fetchStatus();
+    return res.data;
+  }
+
 
   const restartBot = async (params) => {
     console.log('log->restart params', params);
@@ -146,23 +160,37 @@ export const BotProvider = ({ children }) => {
     }
   }
 
-  useEffect(() => {
-    console.log('log->useEffect')
-    setInterval(() => {
-      fetchStatus();
-      fetchBalances();
-    }, 60000);
-    fetchSymbols();
+  const setOption = async (params) => {
+    console.log('log->set params', params);
+    const res = await axios.post(`${backendURL}/api/setOption`, params);
+    console.log('log->start res', res)
     fetchStatus();
+    fetchSymbols();
     fetchBalances();
     fetchHistory();
-    fetchPrices();
     fetchTrades();
-  }, []);
+    return res.data;
+  }
+
+  useEffect(() => {
+    console.log('log->useEffect')
+    // setInterval(() => {
+    //   fetchStatus();
+    //   fetchBalances();
+    // }, 60000);
+    if (userData) {
+      fetchSymbols();
+      fetchStatus();
+      fetchBalances();
+      fetchHistory();
+      fetchPrices();
+      fetchTrades();
+    }
+  }, [userData]);
 
   return (
     <BotContext.Provider
-      value={{ status, loading, symbols, balances, history, trades, prices, startBot, stopBot, restartBot, fetchHistory, fetchTrades, fetchBalances, fetchPrices, fetchStatus }}
+      value={{ status, loading, symbols, balances, history, trades, prices, startBot, stopBot, restartBot, clearHistory, clearCache, setOption, fetchHistory, fetchTrades, fetchBalances, fetchPrices, fetchStatus }}
     >
       {children}
     </BotContext.Provider>

@@ -1,6 +1,6 @@
 import { useWalletContext } from "../../../contexts/WalletContext";
 import { SiSolana } from "react-icons/si";
-import { FaDatabase } from "react-icons/fa";
+import { FaBrush, FaDatabase } from "react-icons/fa";
 import { IoIosDownload, IoMdRefresh } from "react-icons/io";
 import { AiFillPlusCircle, AiFillMinusCircle, AiOutlinePlayCircle, AiOutlineStop } from "react-icons/ai";
 import validator from "@/lib/validator";
@@ -32,8 +32,8 @@ export default function InputForm({ }: any) {
   const [showModal, setShowModal] = useState(false);
 
   const [exchange, setExchange] = useState('mexc');
-  const [apikey, setApikey] = useState('');
-  const [apiSecretkey, setApiSecretkey] = useState('');
+  // const [apikey, setApikey] = useState('');
+  // const [apiSecretkey, setApiSecretkey] = useState('');
   const [authkey, setAuthkey] = useState('');
   const [pair, setPair] = useState('');
   const [pairs, setPairs] = useState<PAIR_INFO[]>([]);
@@ -59,6 +59,9 @@ export default function InputForm({ }: any) {
     startBot,
     stopBot,
     restartBot,
+    setOption,
+    clearCache,
+    clearHistory,
     loading,
     fetchTrades,
     fetchBalances,
@@ -79,15 +82,15 @@ export default function InputForm({ }: any) {
     setExchange(data.exchange)
   }, [status?.storageData?.fastLength, status?.storageData?.slowLength, status?.storageData?.amount, status?.storageData?.timeFrame, status?.storageData?.pairs?.length])
 
-  useEffect(() => {
-    setApikey(localStorage.getItem('apiKey') ?? '');
-    setApiSecretkey(localStorage.getItem('apiSecret') ?? '');
-  }, [])
+  // useEffect(() => {
+  //   setApikey(localStorage.getItem('apiKey') ?? '');
+  //   setApiSecretkey(localStorage.getItem('apiSecret') ?? '');
+  // }, [])
 
   const handleStart = () => {
     const params: Record<string, any> = {
-      apiKey: apikey,
-      apiSecret: apiSecretkey,
+      // apiKey: apikey,
+      // apiSecret: apiSecretkey,
       exchange,
       authkey,
       pair,
@@ -124,6 +127,30 @@ export default function InputForm({ }: any) {
     })
   }
 
+  const handleClearHistory = () => {
+    clearHistory().then((response: any) => {
+      if (response?.acknowledged) toast.success('History is cleared');
+      else toast.warn('Clearing history is failed');
+    })
+  }
+
+  const handleClearCache = () => {
+    clearCache().then((response: any) => {
+      if (response?.success) toast.success('Cache is cleared');
+      else toast.warn('Clearing cache is failed');
+    })
+  }
+
+  const handleExchangeSelect = (newVal: string) => {
+    const params = {
+      exchange: newVal
+    }
+    setOption(params).then((response: any) => {
+      if (response?.success) toast.success('Exchange is set');
+      else toast.warn('Setting exchange is failed');
+    })
+  }
+
   // console.log('debug history', history)
   return (
     <>
@@ -133,7 +160,7 @@ export default function InputForm({ }: any) {
             <label className="text-sm font-semibold uppercase">Exchange</label>
             <select
               value={exchange}
-              onChange={(e) => setExchange(e.target.value)}
+              onChange={(e) => {setExchange(e.target.value); handleExchangeSelect(e.target.value)}}
               className="w-full p-2 mt-1 bg-background text-sm theme-border rounded-md outline-none"
             >
               <option value="binance">Binance</option>
@@ -151,7 +178,7 @@ export default function InputForm({ }: any) {
           </div>
         </div>
         <div className="grid grid-rows-4 lg:grid-rows-1 lg:grid-cols-4 gap-4 mb-4">
-          <div>
+          {/* <div>
             <label className="text-sm font-semibold uppercase">
               API KEY <span className="text-foreground">*</span>
             </label>
@@ -174,7 +201,7 @@ export default function InputForm({ }: any) {
               placeholder="Enter Private Key"
               className="w-full p-2 mt-1 bg-background text-sm theme-border rounded-md outline-none"
             />
-          </div>
+          </div> */}
           {/* <div>
             <label className="text-sm font-semibold uppercase">
               Authorization Key <span className="text-foreground">*</span>
@@ -211,7 +238,7 @@ export default function InputForm({ }: any) {
             >
               <option value={'SELECT PAIR'}>--SELECT PAIR--</option>
               {
-                (symbols ?? INIT_PAIRS).sort().map((p: string) => {
+                (symbols?.length > 0 ? symbols : INIT_PAIRS).sort().map((p: string) => {
                   return (<option key={p} value={p}>{p}</option>)
                 })
               }
@@ -438,6 +465,22 @@ export default function InputForm({ }: any) {
             >
               <AiOutlineStop className="text-foreground text-lg" />
               Stop Bot
+            </button>
+            <button
+              onClick={() => handleClearHistory()}
+              className="bg-background-light text-white px-4 py-2 text-sm rounded-md font-semibold flex gap-1 items-center uppercase"
+              disabled={loading}
+            >
+              <FaBrush className="text-foreground text-lg" />
+              Clear History
+            </button>
+            <button
+              onClick={() => handleClearCache()}
+              className="bg-background-light text-white px-4 py-2 text-sm rounded-md font-semibold flex gap-1 items-center uppercase"
+              disabled={loading}
+            >
+              <FaBrush className="text-foreground text-lg" />
+              Clear Cache
             </button>
           </div>
         </div>
